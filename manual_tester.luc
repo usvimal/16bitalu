@@ -1,0 +1,74 @@
+module manual_tester (
+    input clk,  // clock
+    input rst,  // reset
+    input buttons[5],
+    input io_dip[16],
+    output out[16],
+    output zvn[3],
+    output error
+  ) {
+  
+  dff x[16](#INIT(0), .clk(clk), .rst(rst));
+  dff y[16](#INIT(0), .clk(clk), .rst(rst));
+  dff alufn[6](#INIT(0), .clk(clk), .rst(rst));
+  
+  alu alu;
+  
+  fsm manual(.clk(clk), .rst(rst)) = {
+    FIRSTNUMBER,
+    SECONDNUMBER,
+    OPERATOR,
+    ERROR
+  };
+  
+  
+  always {
+    case (manual.q) {
+      manual.FIRSTNUMBER:
+        if (buttons[1]){
+          x.d = io_dip;
+          manual.d = manual.SECONDNUMBER;}
+        
+        if (buttons[2]){
+          manual.d = manual.ERROR;}  
+            
+        else {
+          manual.d = manual.FIRSTNUMBER;}
+      
+      manual.SECONDNUMBER:
+        if (buttons[1]){
+          y.d = io_dip;
+          manual.d = manual.OPERATOR;}
+            
+        if (buttons[2]){
+          manual.d = manual.ERROR;}  
+        
+        else {
+          manual.d = manual.SECONDNUMBER;}
+      
+      manual.OPERATOR:
+        if (buttons[1]){
+          alufn.d = io_dip;}
+        
+        if (buttons[2]){
+          manual.d = manual.ERROR;}
+              
+        else {
+          manual.d = manual.OPERATOR;}
+      
+      manual.ERROR:            
+         error = 1;
+         manual.d = manual.ERROR;
+          
+    }
+    alu.x = x.q;
+    alu.y = y.q;
+    alu.alufn = alufn.q;
+    out = alu.out;
+    zvn = c{alu.z, alu.v, alu.n};
+    error = alu.error;
+    
+    
+    
+
+}

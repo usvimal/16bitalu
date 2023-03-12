@@ -1,0 +1,40 @@
+module auto_tester (
+    input clk,  // clock
+    input rst,  // reset
+    input start,
+    output io_sel[4],
+    output io_seg[8]
+  ) {
+  
+  .clk(clk) {
+    
+    .rst(rst) {
+      multi_seven_seg multi_seven_seg;
+      fsm autotest = {
+        START,
+        TEST1,
+        TEST2,
+        TEST3,
+        TEST4,
+        TEST5,
+        TEST6,
+        TEST7,
+        TEST8,
+        SUCCESS,
+        FAIL};
+    }
+  }
+  
+  always {
+    io_seg = 0;
+    io_sel = 0;
+    
+    case (autotest.q) {
+      autotest.START:
+        if (start) {
+          autotest.d = autotest.TEST1;
+          
+       autotest.TEST1:
+          
+        }
+  }
