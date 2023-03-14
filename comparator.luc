@@ -3,23 +3,23 @@ module comparator (
     input y[16],
     input alufn[6],
     
-    output out[16]
+    output out
   ) {
 
   always {
     case (alufn[2:1]) {
 
           b01: // CMPEQ
-            out[0] = (x == y);
+            out = (x == y);
 
           b10: // CMPLT
-            out[0] = (x < y);
+            out = (x < y);
 
           b11: //CMPLE
-            out[0] = (x <= y);
+            out = (x <= y);
 
           default:
-            out[0] = 0;
+            out = 0;
         }
   }
 }

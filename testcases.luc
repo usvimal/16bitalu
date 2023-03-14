@@ -1,13 +1,361 @@
 module testcases (
     input clk,  // clock
     input rst,  // reset
-    output out
+    input start,
+    output x[16],
+    output y[16],
+    output out[16],
+    output alufn_out[6]
   ) {
-
   
+  const SLOWCLOCK_SIZE = 28;
+  counter slowClock(#SIZE(SLOWCLOCK_SIZE), .clk(clk), .rst(rst));
+  edge_detector slowClockEdge(#RISE(1), #FALL(0), .clk(clk));
   
+  dff num_one[16](#INIT(0), .clk(clk), .rst(rst));
+  dff num_two[16](#INIT(0), .clk(clk), .rst(rst));
+  dff alufn[6](#INIT(0), .clk(clk), .rst(rst));
+  dff ans[16](#INIT(0), .clk(clk), .rst(rst));
+  
+  fsm auto(.clk(clk), .rst(rst)) = {
+    WAIT,
+    ADD_SIMPLE,
+    ADD_POF,
+    ADD_NOF,
+    SUB_SIMPLE,
+    SUB_POF,
+    SUB_NOF,
+    MUL_SIMPLE,
+    MUL_NEG,
+    DIV_SIMPLE,
+    DIV_NEG,
+    DIV_ZERO,
+    NOT_A_SIMPLE,
+    NOT_B_SIMPLE,
+    XNOR_SIMPLE,
+    XOR_SIMPLE,
+    AND_SIMPLE,
+    SHL_SIMPLE,
+    SHR_SIMPLE,
+    SRA_SIMPLE,
+    A_SIMPLE,
+    B_SIMPLE,
+    OR_SIMPLE,
+    CMPEQ_SUCCESS,
+    CMPEQ_GREATER,
+    CMPEQ_LOWER,
+    CMPLE_EQUAL,
+    CMPLE_GREATER,
+    CMPLE_LOWER,
+    CMPLT_POS,
+    CMPLT_NEG,
+    CMPLT_EQUAL,
+    CMPLT_LOWER
+  };
   
   always {
-    out = 0;
+    slowClockEdge.in = slowClock.value[SLOWCLOCK_SIZE-1];
+    
+    case (auto.q) {
+      auto.WAIT:
+        if (start) {
+          auto.d = auto.ADD_SIMPLE;
+        }
+        else {
+          auto.d = auto.WAIT;
+        }
+      
+      auto.ADD_SIMPLE: // ADDITION
+        num_one.d = 16b0000000000000011;
+        num_two.d = 16b0000000000001001;
+        alufn.d = h0;
+        ans.d = b1100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.ADD_POF;
+        }
+      
+      auto.ADD_POF: // ADDITION (positive overflow)
+        num_one.d = 16b0111111111111110;
+        num_two.d = 16b0111111111111111;
+        alufn.d = h0;
+        ans.d = 16b1111111111111101;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.ADD_NOF;
+        }
+      
+      auto.ADD_NOF: // ADDITION (negative overflow)
+        num_one.d = 16b1111111111111110;
+        num_two.d = 16b1000000000000000;
+        alufn.d = h0;
+        ans.d = 16b0111111111111110;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SUB_SIMPLE;
+        }
+      
+      auto.SUB_SIMPLE: // SUBTRACTION
+        num_one.d = 16b0000000000001001;
+        num_two.d = 16b0000000000000011;
+        alufn.d = h1;
+        ans.d = 16b0000000000000110;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SUB_POF;
+        }
+      
+      auto.SUB_POF: // SUBTRACTION (positive overflow)
+        num_one.d = 16b0111111111111111;
+        num_two.d = 16b1111111111111111;
+        alufn.d = h1;
+        ans.d = 16b1000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SUB_NOF;
+        }
+      
+      auto.SUB_NOF: // SUBTRACTION (negative overflow)
+        num_one.d = 16b1000000000000000;
+        num_two.d = 16b0000000000000001;
+        alufn.d = h1;
+        ans.d = 16b0111111111111111;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.MUL_SIMPLE;
+        }
+      
+      auto.MUL_SIMPLE: // MULTIPLICATION
+        num_one.d = 16b0000000000000011;
+        num_two.d = 16b0000000000001001;
+        alufn.d = h2;
+        ans.d = 16b0000000000011011;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.MUL_NEG;
+        }
+      
+      auto.MUL_NEG: // MULTIPLICATION OF NEG NUMBERS
+        num_one.d = 16b1111111111101100;
+        num_two.d = 16b1111111111111011;
+        alufn.d = h2;
+        ans.d = 16b0000000001100100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.DIV_SIMPLE;
+        }
+      
+      auto.DIV_SIMPLE: // DIVISION
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b0000000000000101;
+        alufn.d = h3;
+        ans.d = 16b0000000000000100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.DIV_NEG;
+        }
+      
+      auto.DIV_NEG: // DIVISION OF NEG NUMBERS
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h3;
+        ans.d = 16b1111111111111011;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.DIV_ZERO;
+        }
+      
+      auto.DIV_ZERO: // DIVISION BY ZERO
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b0000000000000000;
+        alufn.d = h3;
+        ans.d = 16b0000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.NOT_A_SIMPLE;
+        }
+      
+      auto.NOT_A_SIMPLE: // NOT A
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h10;
+        ans.d = 16b1111111111101011;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.NOT_B_SIMPLE;
+        }
+      
+      auto.NOT_B_SIMPLE: // NOT B
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h12;
+        ans.d = 16b0000000000000011;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.XNOR_SIMPLE;
+        }
+      
+      auto.XNOR_SIMPLE: // XNOR
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h14;
+        ans.d = 16b0000000000010111;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.XOR_SIMPLE;
+        }
+      
+      auto.XOR_SIMPLE: // XOR
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h16;
+        ans.d = 16b1111111111101000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.AND_SIMPLE;
+        }
+      
+      auto.AND_SIMPLE: // AND
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h18;
+        ans.d = 16b0000000000010100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SHL_SIMPLE;
+        }
+      
+      auto.SHL_SIMPLE: // SHL
+        num_one.d = 16b0000001111110100;
+        num_two.d = 16b0000000000001010;
+        alufn.d = h20;
+        ans.d = 16b1101000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SHR_SIMPLE;
+        }
+      
+      auto.SHR_SIMPLE: // SHR
+        num_one.d = 16b0000010000110100;
+        num_two.d = 16b0000000000000100;
+        alufn.d = h21;
+        ans.d = 16b0000000001000011;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.SRA_SIMPLE;
+        }
+        
+      auto.SRA_SIMPLE: // SRA 
+        num_one.d = 16b1111110000011000;
+        num_two.d = 16b0000000000000010;
+        alufn.d = h23;
+        ans.d = 16b1111111100000110;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.A_SIMPLE;
+        }
+      
+      auto.A_SIMPLE: // A 
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h1A;
+        ans.d = 16b0000000000010100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.B_SIMPLE;
+        }
+        
+      auto.B_SIMPLE: // B 
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        alufn.d = h1C;
+        ans.d = 16b1111111111111100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.OR_SIMPLE;
+        }
+        
+      auto.OR_SIMPLE: // OR 
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1100110111111100;
+        alufn.d = h1E;
+        ans.d = 16b1111111111111100;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPEQ_SUCCESS;
+        }
+        
+      auto.CMPEQ_SUCCESS: // CMPEQ SUCCESS
+        num_one.d = 16b1000000000000101;
+        num_two.d = 16b1000000000000101;
+        ans.d = 16b0000000000000001;
+        alufn.d = h33;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPEQ_GREATER;          
+        }
+      
+      auto.CMPEQ_GREATER: // CMPEQ FAIL (y > x)
+        num_one.d = 16b0000000000000100;
+        num_two.d = 16b0000000000000101;
+        alufn.d = h33;
+        ans.d = 16b0000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPEQ_LOWER;          
+        }
+      
+      auto.CMPEQ_LOWER: // CMPEQ FAIL (x > y)
+        num_one.d = 16b0000000000000101;
+        num_two.d = 16b0000000000000100;
+        alufn.d = h33;
+        ans.d = 16b0000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLT_POS;          
+        }      
+            
+        
+      auto.CMPLT_POS: // CMPLT SUCCESS
+        num_one.d = 16b0000000000000100;
+        num_two.d = 16b0000000000000101;
+        alufn.d = h35;
+        ans.d = 16b0000000000000001;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLT_NEG;
+        }
+      
+      auto.CMPLT_NEG: // CMPLT SUCCESS (y > x)
+        num_one.d = 16b1000000000000100;
+        num_two.d = 16b1000000000000101;
+        alufn.d = h35;
+        ans.d = 16b0000000000000001;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLT_EQUAL;
+        }
+      
+      auto.CMPLT_EQUAL: // CMPLT FAIL (y > x)
+        num_one.d = 16b1000000000000101;
+        num_two.d = 16b1000000000000101;
+        alufn.d = h35;
+        ans.d = 16b0000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLT_LOWER;
+        }
+            
+      auto.CMPLT_LOWER: // CMPLT FAIL (x > y)
+        num_one.d = 16b1000000000000101;
+        num_two.d = 16b1000000000000100;
+        alufn.d = h35;
+        ans.d = 16b0000000000000000;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLE_EQUAL;
+        }
+        
+      auto.CMPLE_EQUAL: // CMPLE SUCCESS
+        num_one.d = 16b1000000000000101;
+        num_two.d = 16b1000000000000101;
+        alufn.d = h37;
+        ans.d = 16b0000000000000001;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLE_GREATER;          
+        }
+          
+      auto.CMPLE_GREATER: // CMPLE SUCCESS (y > x)
+        num_one.d = 16b0000000000000010;
+        num_two.d = 16b0000000000000101;
+        alufn.d = h37;
+        ans.d = 16b0000000000000001;
+        if (slowClockEdge.out == b1) {
+          auto.d = auto.CMPLE_LOWER;          
+        }
+        
+      auto.CMPLE_LOWER: // CMPLE FAIL (x > y)
+        num_one.d = 16b1000000000000101;
+        num_two.d = 16b1000000000000100;
+        alufn.d = h37;
+        ans.d = 16b0000000000000000;            
+          
+    }
+    
+    x = num_one.q;
+    y = num_two.q;
+    out = ans.q;
+    alufn_out = alufn.q;
   }
 }

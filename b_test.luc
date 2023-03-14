@@ -1,0 +1,40 @@
+module b_test (
+    input clk,  // clock
+    input rst,  // reset
+    input start,
+    output x[16],
+    output y[16],
+    output out[16]
+  ) {
+  
+dff num_one[16](#INIT(0), .clk(clk), .rst(rst));
+dff num_two[16](#INIT(0), .clk(clk), .rst(rst));
+dff ans[16](#INIT(0), .clk(clk), .rst(rst));
+  
+fsm b(.clk(clk), .rst(rst)) = {
+  WAIT,
+  SIMPLE
+  };
+
+  always {
+    
+    case (b.q) {
+      b.WAIT:
+        if (start) {
+          b.d = b.SIMPLE;
+        }
+        else {
+          b.d = b.WAIT;
+        }
+      
+      b.SIMPLE: // B 
+        num_one.d = 16b0000000000010100;
+        num_two.d = 16b1111111111111100;
+        ans.d = 16b1111111111111100;
+        }
+      
+    
+    x = num_one.q;
+    y = num_two.q;
+    out = ans.q;
+  }

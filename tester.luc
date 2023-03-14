@@ -1,0 +1,111 @@
+module tester (
+    input buttons[4],
+    input clk,  // clock
+    input rst,  // reset
+    input io_dip[16],
+    input flip_lsb,
+    output out_result[16],
+    output zvn[3],
+    output error,
+    output test_fail
+  )
+  
+  {
+  
+  dff x[16](#INIT(0), .clk(clk), .rst(rst));
+  dff y[16](#INIT(0), .clk(clk), .rst(rst));
+  dff alufn[6](#INIT(0), .clk(clk), .rst(rst));
+  testcases testcases(.clk(clk), .rst(rst));
+  
+  dff ans[16](#INIT(0),.clk(clk), .rst(rst));
+  alu alu;
+  
+  fsm brain(.clk(clk), .rst(rst)) = {
+    MENU,
+    WAIT_A,
+    WAIT_B,
+    ALUFN,
+    AUTO
+  };
+  
+  sig auto;
+  sig alu_mod[16];
+  
+  always{
+    auto = 0;
+    testcases.start = 0;
+    
+    case (brain.q)
+      {
+      brain.MENU:
+        if (buttons[1] | buttons[0]) {
+          if (buttons[0]) {
+            brain.d = brain.WAIT_A;
+          }
+          else {
+            testcases.start = 1;
+            brain.d = brain.AUTO;
+          }
+        }
+        else {
+          brain.d = brain.MENU;
+        }
+      brain.WAIT_A:
+        if (buttons[3] | buttons[2] | buttons[1] | buttons[0]){ //if any button is pressed
+          x.d = io_dip;
+          brain.d = brain.WAIT_B;
+          
+        }
+        else{
+          brain.d = brain.WAIT_A; //if no press, loop
+        }
+      
+      
+      brain.WAIT_B:
+        if (buttons[3] | buttons[2] | buttons[1] | buttons[0]){ //if any button is pressed
+          y.d = io_dip;
+          brain.d = brain.ALUFN;
+          
+        }
+        else{
+          brain.d = brain.WAIT_B; //if no press, loop
+        }
+      
+      
+      
+      brain.ALUFN:
+        if (buttons[3] | buttons[2] | buttons[1] | buttons[0]){ //if any button is pressed
+          alufn.d = io_dip[5:0];
+        }
+        else{
+          brain.d = brain.ALUFN;
+        }
+      
+      
+      brain.AUTO:
+        auto = 1;
+        x.d = testcases.x;
+        y.d = testcases.y;
+        alufn.d = testcases.alufn_out;
+        ans.d = testcases.out;
+      
+    }
+    
+    alu.x = x.q;
+    alu.y = y.q;
+    alu.alufn = alufn.q;
+    
+    alu_mod = flip_lsb? c{alu.out[15:1], ~alu.out[0]} : alu.out;
+    out_result = alu_mod;
+    zvn = c{alu.z, alu.v, alu.n};
+    error = alu.error;
+    
+    if (auto && (alu_mod != ans.q)) {
+      test_fail = 1;
+    }
+    else {
+      test_fail = 0;
+    }
+    
+  }
+}

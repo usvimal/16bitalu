@@ -47,10 +47,11 @@ module alu (
           
       b11:
         z = 0; v = 0; n = 0; error = 0;
-        out = comparator.out;
+        out[0] = comparator.out; // assign out to lsb of output
+        out[15:1] = 0; // set remaining 15 msb to 0s;
         
       default:
-        z = 0; v = 0; n = 0; error = 1; out = 0;        
+        z = 0; v = 0; n = 0; error = 0; out = 0;        
     
     }
   }

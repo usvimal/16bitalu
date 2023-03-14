@@ -16,28 +16,28 @@ module multiplier (
   always {
     error = 0;
     
-    case (alufn[1:0]) {
-    default:
-      out = 16b0; 
-  
+    case (alufn[1:0]) { 
     b10:
-      out = x * y;
+      out = $signed(x) * $signed(y);
     
     b11: 
-     if (y == 0) {
-        out = x;
+     if (y == 16b0) {
+        out = 16b0;
         error = 1;
+                
     }
      else {    
-     out = x / y;          
+     out = $signed(x) / $signed(y);          
     }
- 
+     
+    default:
+      out = 16b0;
     }          
   
     zvn.x = x;
     zvn.y = y;
     zvn.alufn = alufn;
-    zvn.out = out;
+    zvn.s = out;
 
     
     z = zvn.z;

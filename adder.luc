@@ -29,7 +29,7 @@ module adder (
     zvn.x = x;
     zvn.y = y;
     zvn.alufn = alufn;
-    zvn.out = out;
+    zvn.s = out;
 
     
     z = zvn.z;
